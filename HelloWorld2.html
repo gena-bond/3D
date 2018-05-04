@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Hello World!</title>
+  <script src="../Build/Cesium/Cesium.js"></script>
+  <style>
+  @import url(../Build/Cesium/Widgets/CesiumWidget/CesiumWidget.css);
+  @import url(../Apps/Sandcastle/templates/bucket.css);
+
+  #cesiumContainer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 100%;
+      margin: 0;
+      overflow: hidden;
+      padding: 0;
+      font-family: sans-serif;
+  }
+
+  body {
+      padding: 0;
+      margin: 0;
+      overflow: hidden;
+  }
+
+
+</style>
+</head>
+<body>
+  <div id="cesiumContainer" class="fullSize">
+  <script>
+
+/*var widget = new Cesium.CesiumWidget('cesiumContainer'); //Widget*/
+
+var viewer = new Cesium.Viewer('cesiumContainer', {
+    imageryProvider : new Cesium.ArcGisMapServerImageryProvider({
+        url : '//services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer'
+    }),
+    baseLayerPicker : false
+});
+
+/*Podol (50.455405 , 30.515336)*/
+
+var boundingSphere = new Cesium.BoundingSphere(Cesium.Cartesian3.fromDegrees(30.515336, 50.455405, 1200), 0); //Default coordinate
+
+viewer.homeButton.viewModel.command.beforeExecute.addEventListener(function(commandInfo) {
+  // Fly to custom position
+  viewer.camera.flyToBoundingSphere(boundingSphere);
+
+  // Tell the home button not to do anything
+  commandInfo.cancel = true;
+});
+
+// Set custom initial position
+viewer.camera.flyToBoundingSphere(boundingSphere, {duration: 0});
+
+var url='http://localhost:8282/geoserver/wms'; //Geoserver URL
+
+var layers = viewer.scene.imageryLayers; //Layers
+    /*layers.removeAll();*/
+var  buildings_3D=layers.addImageryProvider(new Cesium.WebMapServiceImageryProvider({
+        url : url,        
+        layers: 'Buildings_3D:building'
+ }));
+
+buildings_3D.alpha  = 0.2; // 0.0 is transparent.  1.0 is opaque.
+buildings_3D.brightness = 1.5; // > 1.0 increases brightness.  < 1.0 decreases.
+
+/*Sandcastle.finishedLoading();*/
+
+  </script>
+  </div>
+</body>
+</html>
