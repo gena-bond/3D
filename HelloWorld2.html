@@ -62,14 +62,15 @@ var layers = viewer.scene.imageryLayers; //Layers
     /*layers.removeAll();*/
 var  buildings_3D=layers.addImageryProvider(new Cesium.WebMapServiceImageryProvider({
         url : url,        
-        layers: 'Buildings_3D:building'
+        layers: 'Buildings_3D:building',
+        parameters : {
+               transparent : 'true',
+               format : 'image/png'
+                    }
  }));
 
-buildings_3D.alpha  = 0.2; // 0.0 is transparent.  1.0 is opaque.
-buildings_3D.brightness = 1.5; // > 1.0 increases brightness.  < 1.0 decreases.
-
-/*Sandcastle.finishedLoading();*/
-
+/*buildings_3D.alpha  = 0.2; // 0.0 is transparent.  1.0 is opaque.
+buildings_3D.brightness = 1.5; // > 1.0 increases brightness.  < 1.0 decreases.*/
   </script>
   </div>
 </body>
