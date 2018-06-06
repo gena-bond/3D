@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Hello World!</title>
+  <script src="https://cesiumjs.org/Cesium/Build/CesiumUnminified/Cesium.js"></script>
+  <style>
+  /*@import url(../Build/Cesium/Widgets/CesiumWidget/CesiumWidget.css);*/
+  @import url(https://cesiumjs.org/Cesium/Source/Widgets/CesiumWidget/CesiumWidget.css);
+  @import url(https://cesiumjs.org/Cesium/Build/Apps/Sandcastle/templates/bucket.css);
+
+  #cesiumContainer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 100%;
+      margin: 0;
+      overflow: hidden;
+      padding: 0;
+      font-family: sans-serif;
+  }
+
+  body {
+      padding: 0;
+      margin: 0;
+      overflow: hidden;
+  }
+
+
+</style>
+</head>
+<body>
+  <div id="cesiumContainer" class="fullSize">
+  <script>
+
+/*Подключение подложки ESRI World Imagery*/
+var viewer = new Cesium.Viewer('cesiumContainer', {
+    imageryProvider : new Cesium.ArcGisMapServerImageryProvider({
+           /*url : '//services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer'*/
+         url : 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer'
+    }),
+    baseLayerPicker : false
+});
+
+/*Подключение рельефа*/
+var terrainProvider = new Cesium.CesiumTerrainProvider({
+          url:'http://localhost:8585/tilesets/tiles',
+          /*requestVertexNormals=true*/
+            });
+viewer.scene.terrainProvider=terrainProvider;
+
+/*Делает не прозрачным рельеф*/
+viewer.scene.globe.depthTestAgainstTerrain = true;
+
+/*Позиционирование камеры на Подоле*/
+var boundingSphere = new Cesium.BoundingSphere(Cesium.Cartesian3.fromDegrees(30.515336, 50.455405, 1200), 0); 
+//Default coordinate for Podol (30.515336, 50.455405, 1200), 0)
+
+/*Подключение потайленных домов*/
+var tileset = new Cesium.Cesium3DTileset({ url: '../../../Specs/Data/Cesium3DTiles/tileset.json' });
+
+/*Подключение дополнительного Cesium3DTileset*/
+/*var tileset1 = new Cesium.Cesium3DTileset({ url: '../../../Specs/Data/Cesium3DTiles/tileset_old.json' });*/
+
+/*tileset1.readyPromise.then(function(tileset) {
+    viewer.scene.primitives.add(tileset);
+    viewer.camera.flyToBoundingSphere(boundingSphere, {duration: 0});
+}).otherwise(function(error) {
+    console.log(error);
+});*/
+
+tileset.readyPromise.then(function(tileset) {
+    viewer.scene.primitives.add(tileset);
+    viewer.camera.flyToBoundingSphere(boundingSphere, {duration: 0});
+}).otherwise(function(error) {
+    console.log(error);
+});
+/*Конец подключения тайлов домов*/
+
+viewer.homeButton.viewModel.command.beforeExecute.addEventListener(function(commandInfo) {
+  // Fly to custom position
+  viewer.camera.flyToBoundingSphere(boundingSphere);
+
+  // Tell the home button not to do anything
+  commandInfo.cancel = true;
+});
+
+// Set custom initial position
+viewer.camera.flyToBoundingSphere(boundingSphere, {duration: 0});
+
+
+</script>
+  </div>
+</body>
+</html>
