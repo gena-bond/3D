@@ -1,0 +1,8 @@
+https://github.com/jimmyangel/sampleterrain
+
+https://stackoverflow.com/questions/28291013/get-ground-altitude-cesiumjs
+
+D:\Cesium\Apps\test\node_modules\sampleterrain
+
+node sampleterrain.js -f ./sampledata/A.geojson -u http://localhost:8585/tilesets/tiles >AA.geojson
+
