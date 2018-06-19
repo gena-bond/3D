@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Hello World!</title>
+  <script src="https://cesiumjs.org/Cesium/Build/CesiumUnminified/Cesium.js"></script>
+  <script src="http://code.jquery.com/jquery-1.11.0.min.js"></script>
+  <style>
+  /*@import url(../Build/Cesium/Widgets/CesiumWidget/CesiumWidget.css);*/
+  @import url(https://cesiumjs.org/Cesium/Source/Widgets/CesiumWidget/CesiumWidget.css);
+  @import url(https://cesiumjs.org/Cesium/Build/Apps/Sandcastle/templates/bucket.css);
+
+  #cesiumContainer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 100%;
+      margin: 0;
+      overflow: hidden;
+      padding: 0;
+      font-family: sans-serif;
+  }
+
+  body {
+      padding: 0;
+      margin: 0;
+      overflow: hidden;
+  }
+
+  .navbar {
+    overflow: hidden;
+    background-color: #333;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+.navbar a {
+    float: left;
+    font-size: 16px;
+    color: white;
+    text-align: center;
+    padding: 14px 16px;
+    text-decoration: none;
+}
+
+.dropdown {
+    float: left;
+    overflow: hidden;
+}
+
+.dropdown .dropbtn {
+    font-size: 16px;    
+    border: none;
+    outline: none;
+    color: white;
+    padding: 14px 16px;
+    background-color: inherit;
+    font-family: inherit;
+    margin: 0;
+}
+
+.navbar a:hover, .dropdown:hover .dropbtn {
+    background-color: red;
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: #f9f9f9;
+    min-width: 160px;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    z-index: 1;
+}
+
+.dropdown-content a {
+    float: none;
+    color: black;
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+    text-align: left;
+}
+
+.dropdown-content a:hover {
+    background-color: #ddd;
+}
+
+.dropdown:hover .dropdown-content {
+    display: block;
+}
+
+</style>
+</head>
+<body>
+  
+  <div id="cesiumContainer" class="fullSize">
+
+    <div class="navbar">
+      <a href="#home">Home</a>
+      <a href="#news">Home1</a>
+        <div class="dropdown">
+            <button class="dropbtn">Оглядові точки
+              <i class="fa fa-caret-down"></i>
+            </button>
+              <div class="dropdown-content">
+                  <a onclick="flyToPos1()">1.Південний міст</a>
+                  <a onclick="flyToPos2()">2.парк Берковці</a>
+                  <a onclick="flyToPos3()">3.Дарницкій міст</a>
+                  <a onclick="flyToPos4()">4.Березняки</a>
+                  <a onclick="flyToPos5()">5.міст Патона</a>
+                  <a onclick="flyToPos6()">6.Русанівська Набережна</a>
+                  <a onclick="flyToPos7()">7.Русанівський міст</a>
+                  <a onclick="flyToPos8()">8.Київ-Дніпровський</a>
+                  <a onclick="flyToPos9()">9.станція Троєщіна-2</a>
+                  <a onclick="flyToPos10()">10.просп.Степани Бендери</a>
+              </div>
+        </div> 
+    </div> 
+
+<div class="toolbar-left">
+        <form action="#" method="get" onsubmit="return false;">
+            <input id="kmlUrl" type="text" size="50" value="http://localhost:8080/Apps/SampleData/kml/Dom.kml">
+            <input type="submit" onclick="onLoadKml()" value="Load KML!">
+            <span id="errorMessage" class="text-danger"></span>
+        </form>
+</div>
+  
+<script>
+
+ 
+/*Подключение подложки ESRI World Imagery*/
+var viewer = new Cesium.Viewer('cesiumContainer', {
+    imageryProvider : new Cesium.ArcGisMapServerImageryProvider({
+           /*url : '//services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer'*/
+         url : 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer'
+    }),
+    baseLayerPicker : false,
+    maximumRenderTimeChange : Infinity
+    /*requestRenderMode : true*/
+});
+
+/*Ускорение работы рендерера*/
+viewer.scene.requestRenderMode = true;
+
+/*Подключение KML*/
+ /*viewer.dataSources.add(Cesium.KmlDataSource.load('../Apps/SampleData/Dom.kml',
+     {
+          camera: viewer.scene.camera,
+          canvas: viewer.scene.canvas
+     })
+  );*/
+
+/*Подключение рельефа*/
+var terrainProvider = new Cesium.CesiumTerrainProvider({
+          url:'http://localhost:8585/tilesets/tiles',
+          requestWaterMask: true, 
+          requestVertexNormals: true
+                  });
+viewer.scene.terrainProvider=terrainProvider;
+
+/*Делает не прозрачным рельеф*/
+viewer.scene.globe.depthTestAgainstTerrain = true;
+
+/*Позиционирование камеры на Подоле*/
+var boundingSphere = new Cesium.BoundingSphere(Cesium.Cartesian3.fromDegrees(30.515336, 50.455405, 1200), 0); 
+//Default coordinate for Podol (30.515336, 50.455405, 1200), 0)
+
+/*Подключение потайленных домов*/
+var tileset = new Cesium.Cesium3DTileset({ url: '../../../Specs/Data/Cesium3DTiles/tileset.json' });
+
+/*Подключение дополнительного Cesium3DTileset*/
+/*var tileset1 = new Cesium.Cesium3DTileset({ url: '../../../Specs/Data/Cesium3DTiles/tileset_old.json' });*/
+
+/*tileset1.readyPromise.then(function(tileset) {
+    viewer.scene.primitives.add(tileset);
+    viewer.camera.flyToBoundingSphere(boundingSphere, {duration: 0});
+}).otherwise(function(error) {
+    console.log(error);
+});*/
+
+tileset.readyPromise.then(function(tileset) {
+    viewer.scene.primitives.add(tileset);
+    viewer.camera.flyToBoundingSphere(boundingSphere, {duration: 0});
+}).otherwise(function(error) {
+    console.log(error);
+});
+/*Конец подключения тайлов домов*/
+
+viewer.homeButton.viewModel.command.beforeExecute.addEventListener(function(commandInfo) {
+  // Fly to custom position
+  viewer.camera.flyToBoundingSphere(boundingSphere);
+
+  // Tell the home button not to do anything
+  commandInfo.cancel = true;
+});
+
+// Set custom initial position
+viewer.camera.flyToBoundingSphere(boundingSphere, {duration: 0});
+
+
+/*$('#myLink1').click(function(){ flyToPos1(); return false; });
+$('#myLink2').click(function(){ flyToPos2(); return false; });
+$('#myLink3').click(function(){ flyToPos3(); return false; });
+$('#myLink4').click(function(){ flyToPos4(); return false; });
+$('#myLink5').click(function(){ flyToPos5(); return false; });
+$('#myLink6').click(function(){ flyToPos6(); return false; });
+$('#myLink7').click(function(){ flyToPos7(); return false; });
+$('#myLink8').click(function(){ flyToPos8(); return false; });
+$('#myLink9').click(function(){ flyToPos9(); return false; });
+$('#myLink10').click(function(){ flyToPos10(); return false; });*/
+
+
+var kmlInput = document.getElementById('kmlUrl');
+var errorMsg = document.getElementById('errorMessage');
+
+function onLoadKml() {
+    //Remove previous KML entities
+    viewer.entities.removeAll();
+
+    //Load the KML object
+    viewer.dataSources.add(
+        Cesium.KmlDataSource.load(kmlInput.value, {
+            camera: viewer.camera,
+            canvas: viewer.canvas
+        }))
+
+        //Use Promise to Handle Callbacks
+        .then(
+            function (kmlData) { //success
+                viewer.flyTo(kmlData.entities);
+            },
+            function (error) { //failure
+                errorMsg.innerHTML = error + ': Bad or null KML.';
+                // failure is often a result of CORS Security Policies
+                // See https://developer.mozilla.org/en-US/docs/Web/HTTP/Access_control_CORS
+            }
+        );
+}
+
+function flyToPos1() { /*Південний міст 101 метр*/
+    /*Sandcastle.declare(flyToHeadingPitchRoll);*/
+    viewer.camera.flyTo({
+        destination : Cesium.Cartesian3.fromDegrees(30.5977244, 50.3943495, 102),
+        orientation : {
+            heading : Cesium.Math.toRadians(300.0),
+            pitch : Cesium.Math.toRadians(0.0),
+            roll : 0.0
+        }
+    });
+}
+
+function flyToPos2() { /*парк Берковці*/
+    /*Sandcastle.declare(flyToHeadingPitchRoll);*/
+    viewer.camera.flyTo({
+        destination : Cesium.Cartesian3.fromDegrees(30.5997557, 50.4073948, 98.0),
+        orientation : {
+            heading : Cesium.Math.toRadians(300.0),
+            pitch : Cesium.Math.toRadians(0.0),
+            roll : 0.0
+        }
+    });
+}
+
+function flyToPos3() { /*Дарницкій міст*/
+    /*Sandcastle.declare(flyToHeadingPitchRoll);*/
+    viewer.camera.flyTo({
+        destination : Cesium.Cartesian3.fromDegrees(30.5934266,50.4175716, 101.0),
+        orientation : {
+            heading : Cesium.Math.toRadians(280.0),
+            pitch : Cesium.Math.toRadians(0.0),
+            roll : 0.0
+        }
+    });
+}
+
+function flyToPos4() { /*жм Березняки*/
+    /*Sandcastle.declare(flyToHeadingPitchRoll);*/
+    viewer.camera.flyTo({
+        destination : Cesium.Cartesian3.fromDegrees(30.592450, 50.424382, 102.0),
+        orientation : {
+            heading : Cesium.Math.toRadians(300.0),
+            pitch : Cesium.Math.toRadians(0.0),
+            roll : 0.0
+        }
+    });
+}
+
+function flyToPos5() {/*Патона міст 100 метр*/
+    /*Sandcastle.declare(flyToHeadingPitchRoll);*/
+    viewer.camera.flyTo({
+        destination : Cesium.Cartesian3.fromDegrees(30.592588, 50.430942, 101.0),
+        orientation : {
+            heading : Cesium.Math.toRadians(280.0),
+            pitch : Cesium.Math.toRadians(0.0),
+            roll : 0.0
+        }
+    });
+}
+
+function flyToPos6() {/*Русанівська Набережна*/
+    /*Sandcastle.declare(flyToHeadingPitchRoll);*/
+    viewer.camera.flyTo({
+        destination : Cesium.Cartesian3.fromDegrees(30.591870, 50.439305, 105.0),
+        orientation : {
+            heading : Cesium.Math.toRadians(270.0),
+            pitch : Cesium.Math.toRadians(0.0),
+            roll : 0.0
+        }
+    });
+}
+
+function flyToPos7() {/*Русанівський міст*/
+    /*Sandcastle.declare(flyToHeadingPitchRoll);*/
+    viewer.camera.flyTo({
+        destination : Cesium.Cartesian3.fromDegrees(30.586950, 50.450777, 97.0),
+        orientation : {
+            heading : Cesium.Math.toRadians(250.0),
+            pitch : Cesium.Math.toRadians(0.0),
+            roll : 0.0
+        }
+    });
+}
+
+function flyToPos8() {/*Київ-Дніпровський*/
+    /*Sandcastle.declare(flyToHeadingPitchRoll);*/
+    viewer.camera.flyTo({
+        destination : Cesium.Cartesian3.fromDegrees(30.594307, 50.460471, 108.0),
+        orientation : {
+            heading : Cesium.Math.toRadians(240.0),
+            pitch : Cesium.Math.toRadians(0.0),
+            roll : 0.0
+        }
+    });
+}
+
+function flyToPos9() {/*станція Троєщіна-2*/
+    /*Sandcastle.declare(flyToHeadingPitchRoll);*/
+    viewer.camera.flyTo({
+        destination : Cesium.Cartesian3.fromDegrees(30.5735505, 50.4830502, 101.0),
+        orientation : {
+            heading : Cesium.Math.toRadians(220.0),
+            pitch : Cesium.Math.toRadians(0.0),
+            roll : 0.0
+        }
+    });
+}
+
+function flyToPos10() {/*просп. Степана Бендери*/
+    /*Sandcastle.declare(flyToHeadingPitchRoll);*/
+    viewer.camera.flyTo({
+        destination : Cesium.Cartesian3.fromDegrees(30.529553, 50.488763, 106.0),
+        orientation : {
+            heading : Cesium.Math.toRadians(180.0),
+            pitch : Cesium.Math.toRadians(0.0),
+            roll : 0.0
+        }
+    });
+}
+
+
+ </script>
+  </div>
+</body>
+</html>
