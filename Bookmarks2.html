@@ -4,6 +4,7 @@
   <title>Hello World!</title>
   <script src="https://cesiumjs.org/Cesium/Build/CesiumUnminified/Cesium.js"></script>
   <script src="http://code.jquery.com/jquery-1.11.0.min.js"></script>
+  <script src="../cesium-navigation-development/Source/viewerCesiumNavigationMixin.js"></script>
   <style>
   /*@import url(../Build/Cesium/Widgets/CesiumWidget/CesiumWidget.css);*/
   @import url(https://cesiumjs.org/Cesium/Source/Widgets/CesiumWidget/CesiumWidget.css);
@@ -141,6 +142,9 @@ var viewer = new Cesium.Viewer('cesiumContainer', {
 /*Ускорение работы рендерера*/
 viewer.scene.requestRenderMode = true;
 
+/*Добавление навигации к Цезиуму...*/
+/*viewer.extend(Cesium.viewerCesiumNavigationMixin, {});*/
+
 /*Подключение KML*/
  /*viewer.dataSources.add(Cesium.KmlDataSource.load('../Apps/SampleData/Dom.kml',
      {
@@ -151,7 +155,7 @@ viewer.scene.requestRenderMode = true;
 
 /*Подключение рельефа*/
 var terrainProvider = new Cesium.CesiumTerrainProvider({
-          url:'http://localhost:8585/tilesets/tiles',
+          url:'http://127.0.0.1:8585/tilesets/tiles',
           requestWaterMask: true, 
           requestVertexNormals: true
                   });
