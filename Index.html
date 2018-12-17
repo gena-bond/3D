@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>KIEV 3d</title>
+  <script src="https://cesiumjs.org/Cesium/Build/CesiumUnminified/Cesium.js"></script>
+  <!--<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>-->
+<style>
+  @import url(https://cesiumjs.org/Cesium/Source/Widgets/CesiumWidget/CesiumWidget.css);
+  @import url(https://cesiumjs.org/Cesium/Build/Apps/Sandcastle/templates/bucket.css);
+
+  #cesiumContainer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 100%;
+      margin: 0;
+      overflow: hidden;
+      padding: 0;
+      font-family: sans-serif;
+  }
+
+  body {
+      padding: 0;
+      margin: 0;
+      overflow: hidden;
+  }
+
+  .navbar {
+    overflow: hidden;
+    background-color: #333;
+    font-family: Arial, Helvetica, sans-serif;
+    /*width:50%;*/
+}
+
+  .navbar a {
+    float: left;
+    font-size: 16px;
+    color: white;
+    text-align: center;
+    padding: 14px 16px;
+    text-decoration: none;
+}
+
+  .dropdown {
+    float: left;
+    overflow: hidden;
+}
+
+  .dropdown .dropbtn {
+    font-size: 16px;    
+    border: none;
+    outline: none;
+    color: white;
+    padding: 14px 16px;
+    background-color: inherit;
+    font-family: inherit;
+    margin: 0;
+}
+
+  .navbar a:hover, .dropdown:hover .dropbtn {
+    background-color: red;
+}
+
+  .dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: #f9f9f9;
+    min-width: 160px;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    z-index: 1;
+}
+
+  .dropdown-content a {
+    float: none;
+    color: black;
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+    text-align: left;
+}
+
+  .dropdown-content a:hover {
+    background-color: #ddd;
+}
+
+  .dropdown:hover .dropdown-content {
+    display: block;
+}
+
+  #toolbar {
+    clear:both;
+    width: 233px; height: 32px;
+    /*position: absolute; left: 762px; top: 0px;*/
+    position: absolute; left: 0px; top: 40px;
+    background: rgba(42, 42, 42, 0.8);
+    padding: 10px;
+    border-radius: 4px;
+          }
+
+  #toolbar input {
+    vertical-align: middle;
+    padding-top: 2px;
+    padding-bottom: 2px;
+        }
+
+  div#toolbar {  
+  display:none;      
+}
+
+</style>
+</head>
+<body>
+  
+  <div id="cesiumContainer" class="fullSize">
+    <div class="navbar">
+      <a onclick="AdjustHorizontalPlane()">Plane on/off</a> <!-- Добавление кнопки поднимающей горизонтальную площадку -->
+        <div class="dropdown">
+            <button class="dropbtn">Оглядові точки <!-- Точки обзора -->
+              <i class="fa fa-caret-down"></i>
+            </button>
+              <div class="dropdown-content">
+                  <a onclick="flyToPos1()">1.Південний міст</a>
+                  <a onclick="flyToPos2()">2.парк Берковщіна</a>
+                  <a onclick="flyToPos3()">3.Дарницкій міст</a>
+                  <a onclick="flyToPos4()">4.Березняки</a>
+                  <a onclick="flyToPos5()">5.міст Патона</a>
+                  <a onclick="flyToPos6()">6.Русанівська Набережна</a>
+                  <a onclick="flyToPos7()">7.Русанівський міст</a>
+                  <a onclick="flyToPos8()">8.Київ-Дніпровський</a>
+                  <a onclick="flyToPos9()">9.станція Троєщіна-2</a>
+                  <a onclick="flyToPos10()">10.просп.Степани Бендери</a>
+              </div>
+        </div> 
+       <a href="#kml">
+        <input type="file" id="myFile" onchange="onLoadKml()">
+       </a> 
+    </div>
+    </div>
+
+    <div id="loadingOverlay"><h1>Loading...</h1></div>
+
+  <div id="toolbar">
+  <table>
+      <tbody>
+        <tr>
+          <td>!</td>
+          <td>Натисність праву кнопку миші - де треба підняти платформу!</td>
+       </tr>
+       <tr>
+          <td>Alpha</td>
+          <td>
+              <input type="range" min="0.0" max="1.0" step="0.02" data-bind="value: alpha, valueUpdate: 'input'">
+              <input type="text" size="5" data-bind="value: alpha">
+          </td>
+       </tr>
+       <tr>
+          <td>Height</td>
+          <td> 
+              <input type="range" min="0" max="300" step="1" data-bind="value: height, valueUpdate: 'input'">
+              <input type="text" size="5" data-bind="value: height">
+          </td>
+       </tr>
+      </tbody></table>
+</div>
+ <script>
+
+//Проверка LocalStorage
+window.onload = alert(localStorage.getItem("storageName"));
+
+/*Подключение подложки ESRI World Imagery*/
+var viewer = new Cesium.Viewer('cesiumContainer', {
+    imageryProvider : new Cesium.ArcGisMapServerImageryProvider({
+         /*url : '//services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer'*/
+         url : 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer'
+    }),
+    baseLayerPicker : false,
+    maximumRenderTimeChange : Infinity,
+    //requestRenderMode : true
+});
+
+//Ускорение работы рендера
+viewer.scene.requestRenderMode = true;
+
+/*<a href="#2d">Home</a> Первая строка меню
+var  geo_Tiff=layers.addImageryProvider(new Cesium.WebMapServiceImageryProvider({
+        url : url,        
+        layers: 'work:Geo',
+        parameters : {
+               transparent : 'true',
+               format : 'image/png',
+               tiled:'true'
+                    }
+ }));*/
+
+/*Добавление навигации к Цезиуму...*/
+/*viewer.extend(Cesium.viewerCesiumNavigationMixin, {});*/
+
+/*Подключение KML*/
+ /*viewer.dataSources.add(Cesium.KmlDataSource.load('../Apps/SampleData/Dom.kml',
+     {
+          camera: viewer.scene.camera,
+          canvas: viewer.scene.canvas
+     })
+  );*/
+
+
+/*Подключение рельефа*/
+var terrainProvider = new Cesium.CesiumTerrainProvider({
+          url:'http://127.0.0.1:8585/tilesets/tiles',
+          requestWaterMask: true, 
+          requestVertexNormals: true
+                  });
+viewer.scene.terrainProvider=terrainProvider;
+resolutionScale=1.0;
+
+/*Делает не прозрачным рельеф*/
+viewer.scene.globe.depthTestAgainstTerrain = true;
+
+/*Позиционирование камеры на Подоле*/
+var boundingSphere = new Cesium.BoundingSphere(Cesium.Cartesian3.fromDegrees(30.515336, 50.455405, 1200), 0); 
+
+/*Подключение потайленных домов*/
+var tileset = new Cesium.Cesium3DTileset({ 
+    url: '../../../Specs/Data/Cesium3DTiles/tileset.json',
+    maximumScreenSpaceError: 32, //Максимальная ошибка пространства экрана, используемая для повышения уровня детализации.
+    skipLevelOfDetail: true, // Определяет, следует ли применять уровень детализации во время обхода.
+    immediatelyLoadDesiredLevelOfDetail: true  
+});
+
+/*Подключение дополнительного Cesium3DTileset*/
+/*var tileset1 = new Cesium.Cesium3DTileset({ url: '../../../Specs/Data/Cesium3DTiles/tileset_old.json' });*/
+
+/*tileset1.readyPromise.then(function(tileset) {
+    viewer.scene.primitives.add(tileset);
+    viewer.camera.flyToBoundingSphere(boundingSphere, {duration: 0});
+}).otherwise(function(error) {
+    console.log(error);
+});*/
+
+tileset.readyPromise.then(function(tileset) {
+    viewer.scene.primitives.add(tileset);
+    viewer.camera.flyToBoundingSphere(boundingSphere, {duration: 0});
+}).otherwise(function(error) {
+    console.log(error);
+});
+  /*Конец подключения тайлов домов*/
+
+viewer.homeButton.viewModel.command.beforeExecute.addEventListener(function(commandInfo) {
+  // Fly to custom position
+viewer.camera.flyToBoundingSphere(boundingSphere);
+
+  // Tell the home button not to do anything
+commandInfo.cancel = true;
+});
+
+// Set custom initial position
+viewer.camera.flyToBoundingSphere(boundingSphere, {duration: 0});
+
+ 
+function onLoadKml() {
+      //var dataSource = new Cesium.KmlDataSource();
+
+      //Remove previous KML entities and height
+      var toolbar = document.getElementById('toolbar');
+      if (toolbar.style.display  == 'inline') {
+        toolbar.style.display  = 'none';
+      };
+      viewer.entities.removeAll(true);
+
+      //Удаление предыдущего KML//
+      //viewer.dataSources.remove(dataSource);
+      viewer.scene.requestRender();
+      
+      var KML=document.getElementById('myFile').files[0];
+      var bin = document.createElement("bin");
+      bin.file=KML
+      var reader = new FileReader();
+        reader.onload = (function (aBin) { 
+          return function(e) {
+            aBin.src=e.target.result;
+            };
+        })(bin);
+        reader.readAsDataURL(KML);
+    
+      var objectURL = window.URL.createObjectURL(KML);
+    
+     /*var kmlInput = document.getElementById('myFile');
+      alert (kmlInput.value)
+      var files; */
+    
+    //Load the KML object
+
+
+    viewer.dataSources.add(
+        Cesium.KmlDataSource.load(objectURL, {
+            camera: viewer.camera,
+            canvas: viewer.canvas
+        }))
+
+        //Use Promise to Handle Callbacks
+        .then(
+            function (kmlData) { //success
+                viewer.flyTo(kmlData.entities);
+            },
+            function (error) { //failure
+                errorMsg.innerHTML = error + ': Bad or null KML.';
+                // failure is often a result of CORS Security Policies
+                // See https://developer.mozilla.org/en-US/docs/Web/HTTP/Access_control_CORS
+            }
+        );
+}
+
+function flyToPos1() { /*Південний міст 101 метр*/
+    /*Sandcastle.declare(flyToHeadingPitchRoll);*/
+    viewer.camera.flyTo({
+        destination : Cesium.Cartesian3.fromDegrees(30.5977244, 50.3943495, 102),
+        orientation : {
+            heading : Cesium.Math.toRadians(300.0),
+            pitch : Cesium.Math.toRadians(0.0),
+            roll : 0.0
+        }
+    });
+}
+
+function flyToPos2() { /*парк Берковці*/
+    /*Sandcastle.declare(flyToHeadingPitchRoll);*/
+    viewer.camera.flyTo({
+        destination : Cesium.Cartesian3.fromDegrees(30.5997557, 50.4073948, 98.0),
+        orientation : {
+            heading : Cesium.Math.toRadians(300.0),
+            pitch : Cesium.Math.toRadians(0.0),
+            roll : 0.0
+        }
+    });
+}
+
+function flyToPos3() { /*Дарницкій міст*/
+    /*Sandcastle.declare(flyToHeadingPitchRoll);*/
+    viewer.camera.flyTo({
+        destination : Cesium.Cartesian3.fromDegrees(30.5934266,50.4175716, 101.0),
+        orientation : {
+            heading : Cesium.Math.toRadians(280.0),
+            pitch : Cesium.Math.toRadians(0.0),
+            roll : 0.0
+        }
+    });
+}
+
+function flyToPos4() { /*жм Березняки*/
+    /*Sandcastle.declare(flyToHeadingPitchRoll);*/
+    viewer.camera.flyTo({
+        destination : Cesium.Cartesian3.fromDegrees(30.592450, 50.424382, 102.0),
+        orientation : {
+            heading : Cesium.Math.toRadians(300.0),
+            pitch : Cesium.Math.toRadians(0.0),
+            roll : 0.0
+        }
+    });
+}
+
+function flyToPos5() {/*Патона міст 100 метр*/
+    /*Sandcastle.declare(flyToHeadingPitchRoll);*/
+    viewer.camera.flyTo({
+        destination : Cesium.Cartesian3.fromDegrees(30.592357, 50.430305, 110.0),
+        orientation : {
+            heading : Cesium.Math.toRadians(280.0),
+            pitch : Cesium.Math.toRadians(0.0),
+            roll : 0.0
+        }
+    });
+}
+
+function flyToPos6() {/*Русанівська Набережна*/
+    /*Sandcastle.declare(flyToHeadingPitchRoll);*/
+    viewer.camera.flyTo({
+        destination : Cesium.Cartesian3.fromDegrees(30.591870, 50.439305, 105.0),
+        orientation : {
+            heading : Cesium.Math.toRadians(270.0),
+            pitch : Cesium.Math.toRadians(0.0),
+            roll : 0.0
+        }
+    });
+}
+
+function flyToPos7() {/*Русанівський міст*/
+    /*Sandcastle.declare(flyToHeadingPitchRoll);*/
+    viewer.camera.flyTo({
+        destination : Cesium.Cartesian3.fromDegrees(30.586950, 50.450777, 97.0),
+        orientation : {
+            heading : Cesium.Math.toRadians(250.0),
+            pitch : Cesium.Math.toRadians(0.0),
+            roll : 0.0
+        }
+    });
+}
+
+function flyToPos8() {/*Київ-Дніпровський*/
+    /*Sandcastle.declare(flyToHeadingPitchRoll);*/
+    viewer.camera.flyTo({
+        destination : Cesium.Cartesian3.fromDegrees(30.594307, 50.460471, 108.0),
+        orientation : {
+            heading : Cesium.Math.toRadians(240.0),
+            pitch : Cesium.Math.toRadians(0.0),
+            roll : 0.0
+        }
+    });
+}
+
+function flyToPos9() {/*станція Троєщіна-2*/
+    /*Sandcastle.declare(flyToHeadingPitchRoll);*/
+    viewer.camera.flyTo({
+        destination : Cesium.Cartesian3.fromDegrees(30.5735505, 50.4830502, 101.0),
+        orientation : {
+            heading : Cesium.Math.toRadians(220.0),
+            pitch : Cesium.Math.toRadians(0.0),
+            roll : 0.0
+        }
+    });
+}
+
+function flyToPos10() {/*просп. Степана Бендери*/
+    /*Sandcastle.declare(flyToHeadingPitchRoll);*/
+    viewer.camera.flyTo({
+        destination : Cesium.Cartesian3.fromDegrees(30.529553, 50.488763, 106.0),
+        orientation : {
+            heading : Cesium.Math.toRadians(180.0),
+            pitch : Cesium.Math.toRadians(0.0),
+            roll : 0.0
+        }
+    });
+}
+function AdjustHorizontalPlane(){
+    var toolbar = document.getElementById('toolbar');
+
+    if (toolbar.style.display  == 'inline') {     
+        //Отвязывание knockout от toolbar, чтоб не было повторойного использования 
+        //var toolbar = document.getElementById('toolbar');
+        Cesium.knockout.cleanNode(toolbar);  
+                
+        //Очистка карты от горизонтальной плоскости
+        viewer.entities.removeAll(true);
+        viewer.scene.requestRender();
+        
+        //Отключения инструмента отображения высоты.
+        toolbar.style.display  = 'none';
+
+        //Меняет подпись к кнопочке
+        document.getElementsByClassName("navbar")[0].getElementsByTagName("a").item(0).innerHTML="Plane off"
+
+    } else {
+        toolbar.style.display  = 'inline';
+        
+        document.getElementsByClassName("navbar")[0].getElementsByTagName("a").item(0).innerHTML="Plane on"
+        //Считывание клика мыши и внутри функции - отстраивание полигона и отображения knockout. 
+        var polywater=customClickEventHandler(event);
+        
+        }                                             
+    }
+
+
+function customClickEventHandler(event) {
+      //Задержка нажатия мыши сбрасываеться в 0
+      Cesium.ScreenSpaceEventHandler.mouseEmulationIgnoreMilliseconds=0;
+            
+      var polywater=0; //Полигон
+      var longitudeString;
+      var latitudeString;
+      //var picking = false;
+
+      var handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+      
+      handler.setInputAction(function(movement) {
+            
+            var cartesian = viewer.scene.pickPosition(movement.position);
+                       
+            if (cartesian) {
+                  var cartographic = Cesium.Cartographic.fromCartesian(cartesian);
+                  longitudeString = Cesium.Math.toDegrees(cartographic.longitude).toFixed(4);
+                  latitudeString = Cesium.Math.toDegrees(cartographic.latitude).toFixed(4);
+                  //console.log('Lon:'+longitudeString);
+                  //console.log('Lat:'+latitudeString);
+                  //console.log('-----');
+                  var polywater=CreatePolygon_(parseFloat(longitudeString),parseFloat(latitudeString));
+                  knockout_(polywater);
+                  //picking=true;
+                  handler.destroy();
+            }
+            else{
+                  alert('Нажмити правой кнопкой позицию для плоскости.');
+            }
+                 }, Cesium.ScreenSpaceEventType.RIGHT_CLICK);
+        
+       //}
+
+       //console.log('-'+longitudeString);
+       // if (longitudeString === undefined) {
+       //       /*console.log('ura');*/
+       //       lon = 30.510457;
+       //       lat = 50.428682;
+       // }
+       // else 
+       // {     lon = parseFloat(longitudeString);
+       //       lat = parseFloat(latitudeString);
+       // }
+              
+       // var coord = new Object();
+       //     coord['lon']=lon;
+       //     coord['lat']=lat;
+
+        return polywater
+}
+        
+
+function CreatePolygon_(lon,lat){
+        var radius=0.009009; //Радиус=1км
+      
+        var coord=([
+                lon - radius, lat - radius,
+                lon + radius, lat - radius,
+                lon + radius, lat + radius,
+                lon - radius, lat + radius]);
+
+        console.log('coord-'+coord);
+        
+        var polygon=viewer.entities.add({
+            name : 'RED extruded polygon over Kiev',
+              polygon: {
+              hierarchy: Cesium.Cartesian3.fromDegreesArray(coord),
+              extrudedHeight: 0.01,
+              material : Cesium.Color.RED.withAlpha(0.3),
+                        }
+                        }); 
+return polygon
+}
+
+function knockout_(polywater){
+    
+    viewer.scene.logarithmicDepthBuffer = false;
+
+    //Добавление платформы - режущей высоту зданий
+  
+    var viewModel = {
+        alpha: 0.3,
+        height: 0
+    };
+    
+    Cesium.knockout.track(viewModel);
+
+    var toolbar = document.getElementById('toolbar');
+    Cesium.knockout.applyBindings(viewModel, toolbar);
+
+    Cesium.knockout.getObservable(viewModel, 'alpha').subscribe(
+        function(newValue) {
+            var alpha = parseFloat(newValue);
+            polywater.polygon.material = Cesium.Color.RED.withAlpha(alpha);
+            viewer.scene.requestRender();
+        }
+      );
+
+    Cesium.knockout.getObservable(viewModel, 'height').subscribe(
+        function(newValue) {
+            newValue=parseInt(newValue);
+            /*console.log(newValue);*/
+            polywater.polygon.extrudedHeight = newValue;
+            viewer.scene.requestRender();
+        }
+      ); 
+}
+
+</script>
+  
+</body>
+</html>
