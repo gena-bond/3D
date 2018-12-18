@@ -166,6 +166,14 @@
  <script>
 
 //Проверка LocalStorage
+
+/*if (storageAvailable('localStorage')) {
+  alert('Yes');// Yippee! We can use localStorage awesomeness
+}
+else {
+  alert('No');// Too bad, no localStorage for us
+}*/
+
 window.onload = alert(localStorage.getItem("storageName"));
 
 /*Подключение подложки ESRI World Imagery*/
@@ -490,23 +498,8 @@ function customClickEventHandler(event) {
                   alert('Нажмити правой кнопкой позицию для плоскости.');
             }
                  }, Cesium.ScreenSpaceEventType.RIGHT_CLICK);
-        
-       //}
+      
 
-       //console.log('-'+longitudeString);
-       // if (longitudeString === undefined) {
-       //       /*console.log('ura');*/
-       //       lon = 30.510457;
-       //       lat = 50.428682;
-       // }
-       // else 
-       // {     lon = parseFloat(longitudeString);
-       //       lat = parseFloat(latitudeString);
-       // }
-              
-       // var coord = new Object();
-       //     coord['lon']=lon;
-       //     coord['lat']=lat;
 
         return polywater
 }
@@ -567,6 +560,20 @@ function knockout_(polywater){
         }
       ); 
 }
+
+/*
+function storageAvailable(type) {
+  try {
+    var storage = window[type],
+      x = '__storage_test__';
+    storage.setItem(x, x);
+    storage.removeItem(x);
+    return true;
+  }
+  catch(e) {
+    return false;
+  }
+}*/
 
 </script>
   
