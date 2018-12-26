@@ -3,6 +3,7 @@
 <head>
   <title>KIEV 3d</title>
   <script src="https://cesiumjs.org/Cesium/Build/CesiumUnminified/Cesium.js"></script>
+
   <!--<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>-->
 <style>
   @import url(https://cesiumjs.org/Cesium/Source/Widgets/CesiumWidget/CesiumWidget.css);
@@ -111,7 +112,7 @@
 </style>
 </head>
 <body>
-  
+  <div id="message">Messege</div>
   <div id="cesiumContainer" class="fullSize">
     <div class="navbar">
       <a onclick="AdjustHorizontalPlane()">Plane on/off</a> <!-- Добавление кнопки поднимающей горизонтальную площадку -->
@@ -163,18 +164,8 @@
        </tr>
       </tbody></table>
 </div>
+
  <script>
-
-//Проверка LocalStorage
-
-/*if (storageAvailable('localStorage')) {
-  alert('Yes');// Yippee! We can use localStorage awesomeness
-}
-else {
-  alert('No');// Too bad, no localStorage for us
-}*/
-
-window.onload = alert(localStorage.getItem("storageName"));
 
 /*Подключение подложки ESRI World Imagery*/
 var viewer = new Cesium.Viewer('cesiumContainer', {
@@ -184,12 +175,14 @@ var viewer = new Cesium.Viewer('cesiumContainer', {
     }),
     baseLayerPicker : false,
     maximumRenderTimeChange : Infinity,
-    //requestRenderMode : true
+    //requestRenderMode : true 
 });
 
 //Ускорение работы рендера
 viewer.scene.requestRenderMode = true;
 
+//mapProjections - add 
+//mapProjection : new Cesium.WebMercatorProjection()
 /*<a href="#2d">Home</a> Первая строка меню
 var  geo_Tiff=layers.addImageryProvider(new Cesium.WebMapServiceImageryProvider({
         url : url,        
@@ -225,8 +218,38 @@ resolutionScale=1.0;
 /*Делает не прозрачным рельеф*/
 viewer.scene.globe.depthTestAgainstTerrain = true;
 
-/*Позиционирование камеры на Подоле*/
-var boundingSphere = new Cesium.BoundingSphere(Cesium.Cartesian3.fromDegrees(30.515336, 50.455405, 1200), 0); 
+/*Получение координат bbox from - LizMap*/
+var bbox_coord =  getCookie('bbox');
+if (bbox_coord !== undefined){
+  var array = bbox_coord.split(",").map(Number);
+  
+  ///Convert from Cartesian3 to cartografic///
+  //Add WebMercator projections
+  var project = new Cesium.WebMercatorProjection(Cesium.Ellipsoid.WGS84); 
+
+  //
+  var c1 = new Cesium.Cartesian3(array[0],array[1],0);
+  var c2 = new Cesium.Cartesian3(array[2],array[3],0);
+  //
+  var c1_1 = project.unproject(c1);
+  var c2_1 = project.unproject(c2);
+  //
+  var lon1_1 = Cesium.Math.toDegrees(c1_1.longitude); 
+  var lat1_1 = Cesium.Math.toDegrees(c1_1.latitude);
+  //
+  var lon2_1 = Cesium.Math.toDegrees(c2_1.longitude); 
+  var lat2_1 = Cesium.Math.toDegrees(c2_1.latitude);
+
+  flyToRectangle(lon1_1,lat1_1,lon2_1,lat2_1);
+} else {
+  /*Позиционирование камеры на Подоле*/
+  var boundingSphere = new Cesium.BoundingSphere(Cesium.Cartesian3.fromDegrees(30.515336, 50.455405, 1200), 0); 
+  // Set custom initial position
+  viewer.camera.flyToBoundingSphere(boundingSphere, {duration: 0});
+};
+
+/*Позиционирование камеры на Подоле
+var boundingSphere = new Cesium.BoundingSphere(Cesium.Cartesian3.fromDegrees(30.515336, 50.455405, 1200), 0); */
 
 /*Подключение потайленных домов*/
 var tileset = new Cesium.Cesium3DTileset({ 
@@ -248,23 +271,19 @@ var tileset = new Cesium.Cesium3DTileset({
 
 tileset.readyPromise.then(function(tileset) {
     viewer.scene.primitives.add(tileset);
-    viewer.camera.flyToBoundingSphere(boundingSphere, {duration: 0});
+    //viewer.camera.flyToBoundingSphere(boundingSphere, {duration: 0});
 }).otherwise(function(error) {
     console.log(error);
 });
   /*Конец подключения тайлов домов*/
 
 viewer.homeButton.viewModel.command.beforeExecute.addEventListener(function(commandInfo) {
-  // Fly to custom position
-viewer.camera.flyToBoundingSphere(boundingSphere);
+    // Fly to custom position
+    viewer.camera.flyToBoundingSphere(boundingSphere);
 
-  // Tell the home button not to do anything
-commandInfo.cancel = true;
+    // Tell the home button not to do anything
+    commandInfo.cancel = true;
 });
-
-// Set custom initial position
-viewer.camera.flyToBoundingSphere(boundingSphere, {duration: 0});
-
  
 function onLoadKml() {
       //var dataSource = new Cesium.KmlDataSource();
@@ -486,9 +505,7 @@ function customClickEventHandler(event) {
                   var cartographic = Cesium.Cartographic.fromCartesian(cartesian);
                   longitudeString = Cesium.Math.toDegrees(cartographic.longitude).toFixed(4);
                   latitudeString = Cesium.Math.toDegrees(cartographic.latitude).toFixed(4);
-                  //console.log('Lon:'+longitudeString);
-                  //console.log('Lat:'+latitudeString);
-                  //console.log('-----');
+                  
                   var polywater=CreatePolygon_(parseFloat(longitudeString),parseFloat(latitudeString));
                   knockout_(polywater);
                   //picking=true;
@@ -497,8 +514,7 @@ function customClickEventHandler(event) {
             else{
                   alert('Нажмити правой кнопкой позицию для плоскости.');
             }
-                 }, Cesium.ScreenSpaceEventType.RIGHT_CLICK);
-      
+                 }, Cesium.ScreenSpaceEventType.RIGHT_CLICK);  
 
 
         return polywater
@@ -561,19 +577,44 @@ function knockout_(polywater){
       ); 
 }
 
-/*
-function storageAvailable(type) {
-  try {
-    var storage = window[type],
-      x = '__storage_test__';
-    storage.setItem(x, x);
-    storage.removeItem(x);
-    return true;
-  }
-  catch(e) {
-    return false;
-  }
-}*/
+// возвращает cookie с именем name, если есть, если нет, то undefined
+function getCookie(name) {
+  var matches = document.cookie.match(new RegExp(
+    "(?:^|; )" + name.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1') + "=([^;]*)"
+  ));
+  return matches ? decodeURIComponent(matches[1]) : undefined;
+}
+
+function flyToRectangle(west,south,east,north) {
+
+    /*var west = -90.0;
+    var south = 38.0;
+    var east = -87.0;
+    var north = 40.0;
+
+    console.log('west - ' + coord1);
+    console.log('south - ' + coord2);
+    console.log('east - ' + coord3);
+    console.log('north - ' + coord4);*/
+
+
+    var rectangle = Cesium.Rectangle.fromDegrees(west, south, east, north);
+    console.log(' - ' + rectangle);
+
+    viewer.camera.flyTo({
+        destination : rectangle
+    });
+
+    // Show the rectangle.  Not required; just for show.
+    viewer.entities.add({
+        rectangle : {
+            coordinates : rectangle,
+            fill : false,
+            outline : true,
+            outlineColor : Cesium.Color.WHITE
+        }
+    });
+}
 
 </script>
   
